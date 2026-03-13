@@ -13,7 +13,29 @@ data Expr
   | Mul [Expr]
   | Pow Expr Int
   | Undefined
-  deriving (Ord)
+
+instance Ord Expr where
+  Const a <= Const b = a <= b
+  Var x <= Var y = x <= y
+  Sum [] <= Sum _ = True
+  Sum _ <= Sum [] = False
+  Sum es <= Sum fs
+    | last es /= last fs = last es < last fs
+    | otherwise = Sum (init es) <= Sum (init fs)
+  Mul es <= Mul fs = Sum es <= Sum fs
+  Pow b e <= Pow c f
+    | b /= c = b <= c
+    | otherwise = e <= f
+  _ <= Const _ = False
+  Const a <= Var x = True
+  Const a <= Mul es = Mul [Const a] <= Mul es
+  Const a <= Sum es = Sum [Const a] <= Sum es
+  Const a <= Pow b e = Pow (Const a) 1 <= Pow b e
+  Mul es <= e = Mul es <= Mul [e]
+  Pow b e <= Var x = Pow b e <= Pow (Var x) 1
+  Pow b e <= Sum es = Pow b e <= Pow (Sum es) 1
+  Sum es <= Var x = Sum es <= Sum [Var x]
+  e <= f = e == f || e < f
 
 instance Show Expr where
   show (Const x)
@@ -64,15 +86,20 @@ simplifyProductRec [Const a, Const b] =
     c -> [Const c]
 simplifyProductRec [Const 1, b] = [b]
 simplifyProductRec [a, Const 1] = [a]
--- TODO: rewrite (result isn't ASAE, e.g. (x)^1)
-simplifyProductRec [Var x, Var y] = simplifyProductRec [Pow (Var x) 1, Pow (Var y) 1]
-simplifyProductRec [Var x, Pow c d] = simplifyProductRec [Pow (Var x) 1, Pow c d]
-simplifyProductRec [Pow b e, Var x] = simplifyProductRec [Pow b e, Pow (Var x) 1]
-simplifyProductRec [Pow b e, Pow c d]
-  | b == c = case simplifyPower b (e + d) of
+simplifyProductRec [Var x, Var y]
+  | x == y = [Pow (Var x) 2]
+  | otherwise = sort [Var x, Var y]
+simplifyProductRec [Var x, Pow c f]
+  | Var x == c = [Pow c (1 + f)]
+  | otherwise = sort [Var x, Pow c f]
+simplifyProductRec [Pow b e, Var x]
+  | b == Var x = [Pow b (1 + e)]
+  | otherwise = sort [Pow b e, Var x]
+simplifyProductRec [Pow b e, Pow c f]
+  | b == c = case simplifyPower b (e + f) of
       Const 1 -> []
       p -> [p]
-  | otherwise = sort [Pow b e, Pow c d]
+  | otherwise = sort [Pow b e, Pow c f]
 simplifyProductRec [Mul e1, Mul e2] = mergeProducts e1 e2
 simplifyProductRec [Mul e1, e2] = mergeProducts e1 [e2]
 simplifyProductRec [e1, Mul e2] = mergeProducts [e1] e2
@@ -115,7 +142,6 @@ simplifySumRec [Const a, Const b] =
     c -> [Const c]
 simplifySumRec [Const 0, b] = [b]
 simplifySumRec [a, Const 0] = [a]
--- TODO: rewrite (result isn't ASAE, e.g. 1.0 * x)
 simplifySumRec [Var x, Var y] = simplifySumRec [Mul [Const 1, Var x], Mul [Const 1, Var y]]
 simplifySumRec [Var x, e] = simplifySumRec [Mul [Const 1, Var x], e]
 simplifySumRec [e, Var x] = simplifySumRec [e, Mul [Const 1, Var x]]
@@ -149,18 +175,8 @@ mergeSums' acc (p : ps) (q : qs) =
       | a == q && b == p -> mergeSums' (acc ++ [q]) (p : ps) qs
       | otherwise -> [Undefined]
 
-toASAE' :: Expr -> Expr
-toASAE' (Pow b 1) = b
-toASAE' (Mul [Const 1, expr]) = expr
-toASAE' expr = expr
-
-toASAE :: Expr -> Expr
-toASAE (Mul exprs) = Mul $ map toASAE' exprs
-toASAE (Sum exprs) = Sum $ map toASAE' exprs
-toASAE expr = expr
-
 automaticSimplify :: Expr -> Expr
 automaticSimplify (Pow expr exponent) = simplifyPower (automaticSimplify expr) exponent
-automaticSimplify (Mul exprs) = toASAE . simplifyProduct $ map automaticSimplify exprs
-automaticSimplify (Sum exprs) = toASAE . simplifySum $ map automaticSimplify exprs
+automaticSimplify (Mul exprs) = simplifyProduct $ map automaticSimplify exprs
+automaticSimplify (Sum exprs) = simplifySum $ map automaticSimplify exprs
 automaticSimplify expr = expr
