@@ -22,26 +22,25 @@ simplifyProduct exprs
       [a] -> a
       exprs' -> Mul exprs'
 
+const1Helper :: Expr -> [Expr]
+const1Helper (Const 1) = []
+const1Helper e = [e]
+
 simplifyProductRec :: [Expr] -> [Expr]
-simplifyProductRec [Const a, Const b] =
-  case a * b of
-    1 -> []
-    c -> [Const c]
+simplifyProductRec [Const a, Const b] = const1Helper $ Const (a * b)
 simplifyProductRec [Const 1, b] = [b]
 simplifyProductRec [a, Const 1] = [a]
 simplifyProductRec [Var x, Var y]
   | x == y = [Pow (Var x) 2]
   | otherwise = sort [Var x, Var y]
 simplifyProductRec [Var x, Pow c f]
-  | Var x == c = [Pow c (1 + f)]
+  | Var x == c = const1Helper $ simplifyPower c (1 + f)
   | otherwise = sort [Var x, Pow c f]
 simplifyProductRec [Pow b e, Var x]
-  | b == Var x = [Pow b (1 + e)]
+  | b == Var x = const1Helper $ simplifyPower b (1 + e)
   | otherwise = sort [Pow b e, Var x]
 simplifyProductRec [Pow b e, Pow c f]
-  | b == c = case simplifyPower b (e + f) of
-      Const 1 -> []
-      p -> [p]
+  | b == c = const1Helper $ simplifyPower b (e + f)
   | otherwise = sort [Pow b e, Pow c f]
 simplifyProductRec [Mul e1, Mul e2] = mergeProducts e1 e2
 simplifyProductRec [Mul e1, e2] = mergeProducts e1 [e2]
@@ -122,4 +121,5 @@ automaticSimplify :: Expr -> Expr
 automaticSimplify (Pow expr exponent) = simplifyPower (automaticSimplify expr) exponent
 automaticSimplify (Mul exprs) = simplifyProduct $ map automaticSimplify exprs
 automaticSimplify (Sum exprs) = simplifySum $ map automaticSimplify exprs
+automaticSimplify (Fun f arg) = Fun f $ automaticSimplify arg
 automaticSimplify expr = expr

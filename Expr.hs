@@ -8,30 +8,38 @@ data Expr
   | Sum [Expr]
   | Mul [Expr]
   | Pow Expr Int
+  | Fun String Expr
   | Undefined
 
+instance Eq Expr where
+  Const a == Const b = a == b
+  Var x == Var y = x == y
+  Sum e == Sum f = e == f
+  Mul e == Mul f = e == f
+  Pow b e == Pow c f = b == c && e == f
+  Fun f a == Fun g b = f == g && a == b
+  Undefined == Undefined = True
+  Var x == Pow (Var y) 1 = x == y
+  _ == _ = False
+
 instance Ord Expr where
-  Const a <= Const b = a <= b
-  Var x <= Var y = x <= y
-  Sum [] <= Sum _ = True
-  Sum _ <= Sum [] = False
-  Sum es <= Sum fs
-    | last es /= last fs = last es < last fs
-    | otherwise = Sum (init es) <= Sum (init fs)
-  Mul es <= Mul fs = Sum es <= Sum fs
-  Pow b e <= Pow c f
-    | b /= c = b <= c
-    | otherwise = e <= f
-  _ <= Const _ = False
-  Const a <= Var x = True
-  Const a <= Mul es = Mul [Const a] <= Mul es
-  Const a <= Sum es = Sum [Const a] <= Sum es
-  Const a <= Pow b e = Pow (Const a) 1 <= Pow b e
-  Mul es <= e = Mul es <= Mul [e]
-  Pow b e <= Var x = Pow b e <= Pow (Var x) 1
-  Pow b e <= Sum es = Pow b e <= Pow (Sum es) 1
-  Sum es <= Var x = Sum es <= Sum [Var x]
-  e <= f = e == f || e < f
+  compare (Const a) (Const b) = compare a b
+  compare (Var x) (Var y) = compare x y
+  compare (Sum es) (Sum fs) = compare (reverse es) (reverse fs)
+  compare (Mul es) (Mul fs) = compare (reverse es) (reverse fs)
+  compare (Pow b e) (Pow c f) = compare b c <> compare e f
+  compare (Fun f a) (Fun g b) = compare f g <> compare a b
+  compare (Const _) _ = LT
+  compare _ (Const _) = GT
+  compare (Mul es) e = compare (Mul es) (Mul [e])
+  compare (Pow b e) (Var x) = compare (Pow b e) (Pow (Var x) 1)
+  compare (Pow b e) (Sum es) = compare (Pow b e) (Pow (Sum es) 1)
+  compare (Pow b e) (Fun f a) = compare (Pow b e) (Pow (Fun f a) 1)
+  compare (Sum es) (Var x) = compare (Sum es) (Sum [Var x])
+  compare (Sum es) (Fun f a) = compare (Sum es) (Sum [Fun f a])
+  compare (Fun f a) (Var x) = GT
+  compare Undefined _ = GT
+  compare a b = compare EQ (compare b a)
 
 instance Show Expr where
   show (Const x)
@@ -41,17 +49,5 @@ instance Show Expr where
   show (Sum exprs) = "(" ++ intercalate " + " (map show exprs) ++ ")"
   show (Mul exprs) = intercalate " * " (map show exprs)
   show (Pow base exponent) = "(" ++ show base ++ ")^" ++ show exponent
+  show (Fun f arg) = f ++ "(" ++ show arg ++ ")"
   show Undefined = "Undefined"
-
-instance Eq Expr where
-  Const a == Const b = a == b
-  Var x == Var y = x == y
-  Sum e == Sum f = e == f
-  Mul e == Mul f = e == f
-  Pow b e == Pow c f = b == c && e == f
-  Undefined == Undefined = True
-  Var x == Pow (Var y) 1 = x == y
-  Pow (Var x) 1 == Var y = x == y
-  (Var x) == (Mul [Const 1, Var y]) = x == y
-  Mul [Const 1, Var x] == Var y = x == y
-  _ == _ = False
