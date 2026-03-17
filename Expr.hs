@@ -19,7 +19,6 @@ instance Eq Expr where
   Pow b e == Pow c f = b == c && e == f
   Fun f a == Fun g b = f == g && a == b
   Undefined == Undefined = True
-  Var x == Pow (Var y) 1 = x == y
   _ == _ = False
 
 instance Ord Expr where

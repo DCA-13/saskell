@@ -22,26 +22,18 @@ simplifyProduct exprs
       [a] -> a
       exprs' -> Mul exprs'
 
-const1Helper :: Expr -> [Expr]
-const1Helper (Const 1) = []
-const1Helper e = [e]
+constHelper :: Double -> Expr -> [Expr]
+constHelper a (Const b) | a == b = []
+constHelper _ e = [e]
 
 simplifyProductRec :: [Expr] -> [Expr]
-simplifyProductRec [Const a, Const b] = const1Helper $ Const (a * b)
+simplifyProductRec [Const a, Const b] = constHelper 1 $ Const (a * b)
 simplifyProductRec [Const 1, b] = [b]
 simplifyProductRec [a, Const 1] = [a]
-simplifyProductRec [Var x, Var y]
-  | x == y = [Pow (Var x) 2]
-  | otherwise = sort [Var x, Var y]
-simplifyProductRec [Var x, Pow c f]
-  | Var x == c = const1Helper $ simplifyPower c (1 + f)
-  | otherwise = sort [Var x, Pow c f]
-simplifyProductRec [Pow b e, Var x]
-  | b == Var x = const1Helper $ simplifyPower b (1 + e)
-  | otherwise = sort [Pow b e, Var x]
-simplifyProductRec [Pow b e, Pow c f]
-  | b == c = const1Helper $ simplifyPower b (e + f)
-  | otherwise = sort [Pow b e, Pow c f]
+simplifyProductRec [Var x, Var y] | x == y = [Pow (Var x) 2]
+simplifyProductRec [Pow b e, Pow c f] | b == c = constHelper 1 $ simplifyPower b (e + f)
+simplifyProductRec [e, Pow b exp] | e == b = constHelper 1 $ simplifyPower b (exp + 1)
+simplifyProductRec [Pow b exp, e] | e == b = constHelper 1 $ simplifyPower b (exp + 1)
 simplifyProductRec [Mul e1, Mul e2] = mergeProducts e1 e2
 simplifyProductRec [Mul e1, e2] = mergeProducts e1 [e2]
 simplifyProductRec [e1, Mul e2] = mergeProducts [e1] e2
@@ -78,20 +70,13 @@ simplifySum exprs
       exprs' -> Sum exprs'
 
 simplifySumRec :: [Expr] -> [Expr]
-simplifySumRec [Const a, Const b] =
-  case a + b of
-    0 -> []
-    c -> [Const c]
+simplifySumRec [Const a, Const b] = constHelper 0 $ Const (a + b)
 simplifySumRec [Const 0, b] = [b]
 simplifySumRec [a, Const 0] = [a]
-simplifySumRec [Var x, Var y] = simplifySumRec [Mul [Const 1, Var x], Mul [Const 1, Var y]]
-simplifySumRec [Var x, e] = simplifySumRec [Mul [Const 1, Var x], e]
-simplifySumRec [e, Var x] = simplifySumRec [e, Mul [Const 1, Var x]]
-simplifySumRec [Mul [Const a, Var x], Mul [Const b, Var y]]
-  | x == y = case simplifyProduct [Const (a + b), Var x] of
-      Const 0 -> []
-      p -> [p]
-  | otherwise = sort [Mul [Const a, Var x], Mul [Const b, Var y]]
+simplifySumRec [Var x, Var y] | x == y = [Mul [Const 2, Var x]]
+simplifySumRec [Mul [Const a, e], Mul [Const b, f]] | e == f = constHelper 0 $ simplifyProduct [Const (a + b), e]
+simplifySumRec [e, Mul [Const a, f]] | e == f = constHelper 0 $ simplifyProduct [Const (a + 1), e]
+simplifySumRec [Mul [Const a, e], f] | e == f = constHelper 0 $ simplifyProduct [Const (a + 1), e]
 simplifySumRec [Sum e1, Sum e2] = mergeSums e1 e2
 simplifySumRec [Sum e1, e2] = mergeSums e1 [e2]
 simplifySumRec [e1, Sum e2] = mergeSums [e1] e2
@@ -112,10 +97,15 @@ mergeSums' acc (p : ps) (q : qs) =
   case simplifySumRec [p, q] of
     [] -> mergeSums' acc ps qs
     [h] -> mergeSums' (acc ++ [h]) ps qs
+    -- [_, _] -> mergeSums' (acc ++ [a]) pss qss
+    --   where
+    --     [a, b] = sort [p, q]
+    --     pss = if a == p then ps else p : ps
+    --     qss = if a == q then qs else q : qs
     [a, b]
       | a == p && b == q -> mergeSums' (acc ++ [p]) ps (q : qs)
       | a == q && b == p -> mergeSums' (acc ++ [q]) (p : ps) qs
-      | otherwise -> [Undefined]
+      | otherwise -> error "mergeSums error"
 
 automaticSimplify :: Expr -> Expr
 automaticSimplify (Pow expr exponent) = simplifyPower (automaticSimplify expr) exponent
