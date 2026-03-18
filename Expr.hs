@@ -10,16 +10,7 @@ data Expr
   | Pow Expr Int
   | Fun String Expr
   | Undefined
-
-instance Eq Expr where
-  Const a == Const b = a == b
-  Var x == Var y = x == y
-  Sum e == Sum f = e == f
-  Mul e == Mul f = e == f
-  Pow b e == Pow c f = b == c && e == f
-  Fun f a == Fun g b = f == g && a == b
-  Undefined == Undefined = True
-  _ == _ = False
+  deriving (Eq)
 
 instance Ord Expr where
   compare (Const a) (Const b) = compare a b
