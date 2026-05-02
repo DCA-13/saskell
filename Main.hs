@@ -1,8 +1,6 @@
 module Main where
 
-import Expr
-import Simplify
+import Repl
 
 main :: IO ()
-main = do
-  putStrLn "Hello World!"
+main = repl
