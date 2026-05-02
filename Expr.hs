@@ -39,7 +39,9 @@ instance Show Expr where
     | floor x == ceiling x = show $ floor x
     | otherwise = show x
   show (Var str) = str ++ "_"
+  show (Sum [e]) = '+' : show e
   show (Sum exprs) = "(" ++ intercalate " + " (map show exprs) ++ ")"
+  show (Mul [e]) = '*' : show e
   show (Mul exprs) = intercalate " * " (map show exprs)
   show (Pow base exponent) = "(" ++ show base ++ ")^" ++ show exponent
   show (Fun f arg) = f ++ "(" ++ show arg ++ ")"
