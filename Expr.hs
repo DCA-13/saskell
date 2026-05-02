@@ -1,7 +1,10 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Expr where
 
 import Data.List (intercalate)
 
+-- TODO: allow integers/fractions, implement negation?
 data Expr
   = Const Double
   | Var String
@@ -35,9 +38,27 @@ instance Show Expr where
   show (Const x)
     | floor x == ceiling x = show $ floor x
     | otherwise = show x
-  show (Var str) = str
+  show (Var str) = str ++ "_"
   show (Sum exprs) = "(" ++ intercalate " + " (map show exprs) ++ ")"
   show (Mul exprs) = intercalate " * " (map show exprs)
   show (Pow base exponent) = "(" ++ show base ++ ")^" ++ show exponent
   show (Fun f arg) = f ++ "(" ++ show arg ++ ")"
   show Undefined = "Undefined"
+
+pattern Zero :: Expr
+pattern Zero = Const 0
+
+pattern One :: Expr
+pattern One = Const 1
+
+pattern (:+) :: Expr -> Expr -> Expr
+pattern a :+ b = Sum [a, b]
+
+pattern (:*) :: Expr -> Expr -> Expr
+pattern a :* b = Mul [a, b]
+
+pattern (:^) :: Expr -> Int -> Expr
+pattern b :^ e = Pow b e
+
+pattern (:@) :: String -> Expr -> Expr
+pattern f :@ arg = Fun f arg
