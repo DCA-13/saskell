@@ -1,5 +1,3 @@
--- {-# LANGUAGE OverloadedStrings #-}
-
 module Parser (parser) where
 
 import Data.Char
@@ -23,6 +21,7 @@ lexeme = L.lexeme sc
 symbol :: String -> Parser String
 symbol = L.symbol sc
 
+parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
 posIntParser :: Parser Integer
@@ -52,6 +51,7 @@ powParser = Pow <$> factorParser <*> (fromInteger <$> (symbol "^" *> integerPars
 factorParser :: Parser Expr
 factorParser = choice (map try [constParser, varParser, funParser, parens exprParser]) <?> "factor"
 
+ifSingle :: ([a] -> a) -> [a] -> a
 ifSingle _ [e] = e
 ifSingle f es = f es
 
@@ -62,11 +62,5 @@ termParser = ifSingle Mul <$> (try powParser <|> factorParser) `sepBy` symbol "*
 -- TODO: subtraction
 exprParser :: Parser Expr
 exprParser = ifSingle Sum <$> termParser `sepBy` symbol "+" <?> "expression"
-
-runMyParser :: Parser a -> String -> Either String a
-runMyParser parser input =
-  case runParser parser "" input of
-    Left err -> Left $ errorBundlePretty err
-    Right x  -> Right x
 
 parser = runParser exprParser ""

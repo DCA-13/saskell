@@ -1,15 +1,15 @@
 module Simplify (automaticSimplify) where
 
-import Data.List (partition, sort)
+import Data.List (sort)
 import Expr
 
 simplifyPower :: Expr -> Int -> Expr
 simplifyPower (Const a) b = Const (a ^ b)
 simplifyPower Undefined _ = Undefined
-simplifyPower base 0 = One
+simplifyPower _ 0 = One
 simplifyPower base 1 = base
 simplifyPower (base :^ a) b = base :^ (a * b)
-simplifyPower base exponent = base :^ exponent
+simplifyPower base e = base :^ e
 
 simplifyProduct :: [Expr] -> Expr
 simplifyProduct [] = One
@@ -32,8 +32,8 @@ simplifyProductRec [One, b] = [b]
 simplifyProductRec [a, One] = [a]
 simplifyProductRec [Var x, Var y] | x == y = [Var x :^ 2]
 simplifyProductRec [b :^ e, c :^ f] | b == c = constHelper 1 $ simplifyPower b (e + f)
-simplifyProductRec [e, b :^ exp] | e == b = constHelper 1 $ simplifyPower b (exp + 1)
-simplifyProductRec [b :^ exp, e] | e == b = constHelper 1 $ simplifyPower b (exp + 1)
+simplifyProductRec [e, b :^ ex] | e == b = constHelper 1 $ simplifyPower b (ex + 1)
+simplifyProductRec [b :^ ex, e] | e == b = constHelper 1 $ simplifyPower b (ex + 1)
 simplifyProductRec [Mul e1, Mul e2] = mergeProducts e1 e2
 simplifyProductRec [Mul e1, e2] = mergeProducts e1 [e2]
 simplifyProductRec [e1, Mul e2] = mergeProducts [e1] e2
@@ -43,6 +43,7 @@ simplifyProductRec (e : es) = mergeProducts prods (simplifyProductRec es)
     prods = case e of
       Mul exprs -> exprs
       expr -> [expr]
+simplifyProductRec [] = error "simplifyProductRec errror"
 
 mergeProducts :: [Expr] -> [Expr] -> [Expr]
 mergeProducts = mergeProducts' []
@@ -58,6 +59,7 @@ mergeProducts' acc (p : ps) (q : qs) =
       | a == p && b == q -> mergeProducts' (acc ++ [p]) ps (q : qs)
       | a == q && b == p -> mergeProducts' (acc ++ [q]) (p : ps) qs
       | otherwise -> [Undefined]
+    _ -> error "mergeProducts' error"
 
 simplifySum :: [Expr] -> Expr
 simplifySum [] = Zero
@@ -86,6 +88,7 @@ simplifySumRec (e : es) = mergeSums sums (simplifySumRec es)
     sums = case e of
       Sum exprs -> exprs
       expr -> [expr]
+simplifySumRec [] = error "simplifySumRec error"
 
 mergeSums :: [Expr] -> [Expr] -> [Expr]
 mergeSums = mergeSums' []
@@ -101,9 +104,10 @@ mergeSums' acc (p : ps) (q : qs) =
       | a == p && b == q -> mergeSums' (acc ++ [p]) ps (q : qs)
       | a == q && b == p -> mergeSums' (acc ++ [q]) (p : ps) qs
       | otherwise -> error "mergeSums error"
+    _ -> error "mergeSums error"
 
 automaticSimplify :: Expr -> Expr
-automaticSimplify (expr :^ exponent) = simplifyPower (automaticSimplify expr) exponent
+automaticSimplify (expr :^ expo) = simplifyPower (automaticSimplify expr) expo
 automaticSimplify (Mul exprs) = simplifyProduct $ map automaticSimplify exprs
 automaticSimplify (Sum exprs) = simplifySum $ map automaticSimplify exprs
 automaticSimplify (f :@ arg) = f :@ automaticSimplify arg

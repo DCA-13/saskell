@@ -30,7 +30,7 @@ instance Ord Expr where
   compare (Pow b e) (Fun f a) = compare (Pow b e) (Pow (Fun f a) 1)
   compare (Sum es) (Var x) = compare (Sum es) (Sum [Var x])
   compare (Sum es) (Fun f a) = compare (Sum es) (Sum [Fun f a])
-  compare (Fun f a) (Var x) = GT
+  compare (Fun _ _) (Var _) = GT
   compare Undefined _ = GT
   compare a b = compare EQ (compare b a)
 
@@ -43,7 +43,7 @@ instance Show Expr where
   show (Sum exprs) = "(" ++ intercalate " + " (map show exprs) ++ ")"
   show (Mul [e]) = '*' : show e
   show (Mul exprs) = intercalate " * " (map show exprs)
-  show (Pow base exponent) = "(" ++ show base ++ ")^" ++ show exponent
+  show (Pow base e) = "(" ++ show base ++ ")^" ++ show e
   show (Fun f arg) = f ++ "(" ++ show arg ++ ")"
   show Undefined = "Undefined"
 
