@@ -71,11 +71,11 @@ termParser = handleList Mul <$> listParser <?> "expression"
     divParser = symbol "/" *> (flip Pow (-1) <$> factorParser')
 
 exprParser :: Parser Expr
-exprParser = (handleList Sum <$> listParser) <* eof <?> "expression"
+exprParser = handleList Sum <$> listParser <?> "expression"
   where
     listParser = (:) <$> termParser <*> many (sumParser <|> subParser)
     sumParser = symbol "+" *> termParser
     subParser = symbol "-" *> ((Const (-1) :*) <$> termParser)
 
 parser :: String -> Either (ParseErrorBundle String Void) Expr
-parser = runParser exprParser ""
+parser = runParser (exprParser <* eof) ""
