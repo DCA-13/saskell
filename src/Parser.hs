@@ -22,7 +22,7 @@ symbol :: String -> Parser String
 symbol = L.symbol sc
 
 parens :: Parser a -> Parser a
-parens = between (symbol "(") (symbol ")")
+parens = between (symbol "(" <?> "opening (") (symbol ")" <?> "closing )")
 
 posIntParser :: Parser Integer
 posIntParser = lexeme L.decimal <?> "integer"
@@ -63,7 +63,7 @@ handleList _ [e] = e
 handleList f es = f es
 
 termParser :: Parser Expr
-termParser = handleList Mul <$> listParser <?> "expression"
+termParser = handleList Mul <$> listParser <?> "term"
   where
     listParser = (:) <$> factorParser' <*> many (mulParser <|> divParser)
     factorParser' = try powParser <|> factorParser <?> "factor"
