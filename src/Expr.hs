@@ -2,8 +2,6 @@
 
 module Expr where
 
-import Data.List (intercalate)
-
 -- TODO: allow integers/fractions, implement negation?
 data Expr
   = Const Double
@@ -13,7 +11,7 @@ data Expr
   | Pow Expr Int
   | Fun String Expr
   | Undefined
-  deriving (Eq)
+  deriving (Eq, Show)
 
 instance Ord Expr where
   compare (Const a) (Const b) = compare a b
@@ -33,19 +31,6 @@ instance Ord Expr where
   compare (Fun _ _) (Var _) = GT
   compare Undefined _ = GT
   compare a b = compare EQ (compare b a)
-
-instance Show Expr where
-  show (Const x)
-    | floor x == ceiling x = show $ floor x
-    | otherwise = show x
-  show (Var str) = str ++ "_"
-  show (Sum [e]) = '+' : show e
-  show (Sum exprs) = "(" ++ intercalate " + " (map show exprs) ++ ")"
-  show (Mul [e]) = '*' : show e
-  show (Mul exprs) = intercalate " * " (map show exprs)
-  show (Pow base e) = "(" ++ show base ++ ")^" ++ show e
-  show (Fun f arg) = f ++ "(" ++ show arg ++ ")"
-  show Undefined = "Undefined"
 
 pattern Zero :: Expr
 pattern Zero = Const 0
