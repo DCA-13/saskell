@@ -4,7 +4,7 @@ import Data.List (sort)
 import Expr
 
 simplifyPower :: Expr -> Int -> Expr
-simplifyPower (Const a) b = Const (a ^ b)
+simplifyPower (Const a) b = Const (a ^^ b)
 simplifyPower Undefined _ = Undefined
 simplifyPower _ 0 = One
 simplifyPower base 1 = base

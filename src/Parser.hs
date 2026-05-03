@@ -31,10 +31,16 @@ negIntParser :: Parser Integer
 negIntParser = negate <$> (symbol "-" *> integerParser)
 
 integerParser :: Parser Integer
-integerParser = negIntParser <|> posIntParser
+integerParser = try negIntParser <|> posIntParser
+
+posDoubleParser :: Parser Double
+posDoubleParser = lexeme L.float <?> "double"
+
+negDoubleParser :: Parser Double
+negDoubleParser = negate <$> (symbol "-" *> doubleParser)
 
 doubleParser :: Parser Double
-doubleParser = lexeme L.float <?> "double"
+doubleParser = try negDoubleParser <|> posDoubleParser
 
 constParser :: Parser Expr
 constParser = Const <$> (try doubleParser <|> (fromInteger <$> integerParser))
@@ -46,21 +52,30 @@ funParser :: Parser Expr
 funParser = Fun <$> some (satisfy isAlphaNum) <*> parens exprParser <?> "function"
 
 powParser :: Parser Expr
-powParser = Pow <$> factorParser <*> (fromInteger <$> (symbol "^" *> integerParser)) <?> "power"
+powParser = Pow <$> factorParser <*> (fromInteger <$> (symbol "^" *> (try integerParser <|> parens integerParser))) <?> "power"
 
 factorParser :: Parser Expr
 factorParser = choice (map try [constParser, varParser, funParser, parens exprParser]) <?> "factor"
 
-ifSingle :: ([a] -> a) -> [a] -> a
-ifSingle _ [e] = e
-ifSingle f es = f es
+handleList :: ([Expr] -> Expr) -> [Expr] -> Expr
+handleList _ [] = Undefined
+handleList _ [e] = e
+handleList f es = f es
 
--- TODO: division
 termParser :: Parser Expr
-termParser = ifSingle Mul <$> (try powParser <|> factorParser) `sepBy` symbol "*" <?> "term"
+termParser = handleList Mul <$> listParser <?> "expression"
+  where
+    listParser = (:) <$> factorParser' <*> many (mulParser <|> divParser)
+    factorParser' = try powParser <|> factorParser <?> "factor"
+    mulParser = symbol "*" *> factorParser'
+    divParser = symbol "/" *> (flip Pow (-1) <$> factorParser')
 
--- TODO: subtraction
 exprParser :: Parser Expr
-exprParser = ifSingle Sum <$> termParser `sepBy` symbol "+" <?> "expression"
+exprParser = (handleList Sum <$> listParser) <* eof <?> "expression"
+  where
+    listParser = (:) <$> termParser <*> many (sumParser <|> subParser)
+    sumParser = symbol "+" *> termParser
+    subParser = symbol "-" *> ((Const (-1) :*) <$> termParser)
 
+parser :: String -> Either (ParseErrorBundle String Void) Expr
 parser = runParser exprParser ""
