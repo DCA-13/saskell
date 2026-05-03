@@ -24,6 +24,9 @@ symbol = L.symbol sc
 parens :: Parser a -> Parser a
 parens = between (symbol "(" <?> "opening (") (symbol ")" <?> "closing )")
 
+brackets :: Parser a -> Parser a
+brackets = between (symbol "[" <?> "opening [") (symbol "]" <?> "closing ]")
+
 posIntParser :: Parser Integer
 posIntParser = lexeme L.decimal <?> "integer"
 
@@ -49,7 +52,7 @@ varParser :: Parser Expr
 varParser = Var <$> (some (satisfy isAlphaNum) <* symbol "_") <?> "variable"
 
 funParser :: Parser Expr
-funParser = Fun <$> some (satisfy isAlphaNum) <*> parens exprParser <?> "function"
+funParser = Fun <$> some (satisfy isAlphaNum) <*> brackets exprParser <?> "function"
 
 powParser :: Parser Expr
 powParser = Pow <$> factorParser <*> (fromInteger <$> (symbol "^" *> (try integerParser <|> parens integerParser))) <?> "power"

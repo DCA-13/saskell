@@ -13,5 +13,5 @@ pretty (Sum exprs) = "(" ++ intercalate " + " (map pretty exprs) ++ ")"
 pretty (Mul [e]) = '*' : pretty e
 pretty (Mul exprs) = intercalate " * " (map pretty exprs)
 pretty (Pow base e) = "(" ++ pretty base ++ ")^" ++ show e
-pretty (Fun f arg) = f ++ "(" ++ pretty arg ++ ")"
+pretty (Fun f arg) = f ++ "[" ++ pretty arg ++ "]"
 pretty Undefined = "Undefined"
