@@ -5,7 +5,7 @@ import Data.List (intercalate)
 
 pretty :: Expr -> String
 pretty (Const x)
-  | floor x == ceiling x = show $ floor x
+  | (floor x :: Int) == (ceiling x :: Int) = show (floor x :: Int)
   | otherwise = show x
 pretty (Var str) = str ++ "_"
 pretty (Sum [e]) = '+' : show e
